@@ -119,7 +119,9 @@ Projects that best leverage Higher⁷’s features can gain extra visibility:
 2. **Build a Badass Concept:** Ensure your idea aligns with the Higher⁷ ethos.
 3. **Pitch or Submit a Proposal:** Active community members receive priority.
 
-Even if you’re not featured as a HiLite or Ascending project, every Creatooor can create a lore page for their Cult Coin using our provided template.
+Even if you’re not featured as a HiLite or Ascending project, every Creatooor can create a lore page for their Cult Coin using our provided template. 
+
+Designation of a project as a "HiLited" project or as an "Ascending" project does not constitute an official partnership with or endorsement from Higher. A "HiLite" or "Ascending" designation does not constitute financial advice to site users. Higher is not responsible for the success of any project, and this includes "HiLited" or "ascending" projects. The team behind a project is solely responsible for the success or failure of their launch / the price performance of their token. Higher is not a marketing firm, and does not offer any plans for co-marketing with projects. Please remember that when you launch a project through the Higher site, you take full responsibility for any outcomes, whether your project received a "HiLited" or "Ascending" designation. 
 
 ### The Higherrrrrrr Hub
 

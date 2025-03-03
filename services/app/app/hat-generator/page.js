@@ -287,10 +287,10 @@ export default function HatGenerator() {
         {/* Header */}
         <div className="text-center mb-12">
           <h1 className="text-4xl md:text-5xl font-bold mb-4">
-            <GlitchText>PUT ON YOUR HAT</GlitchText>
+            <GlitchText>REP YOUR CULT</GlitchText>
           </h1>
           <p className="text-xl text-green-500/80">
-            {isCreator ? "Create a custom hat for your token" : "Customize your profile with a token hat"}
+            {isCreator ? "Create a custom hat for your token" : "Create a custom hat to pledge your loyalty"}
           </p>
         </div>
         
@@ -410,6 +410,17 @@ export default function HatGenerator() {
                     )}
                   </div>
                 )}
+                
+                {/* Hat Orientation */}
+                <div className="mb-4">
+                  <label className="block text-sm mb-2 text-green-500/70">Hat Orientation</label>
+                  <button
+                    onClick={() => setHatFlipped(!hatFlipped)}
+                    className="px-4 py-2 border border-green-500/30 rounded-lg bg-black text-green-500 hover:border-green-500/60 transition-colors"
+                  >
+                    {hatFlipped ? "Flip Right" : "Flip Left"}
+                  </button>
+                </div>
               </div>
             )}
             

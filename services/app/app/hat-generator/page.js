@@ -39,10 +39,17 @@ export default function HatGenerator() {
   // State for hat flipping
   const [hatFlipped, setHatFlipped] = useState(false);
   
+  // State for logo
+  const [hatLogo, setHatLogo] = useState(null);
+  const [logoPosition, setLogoPosition] = useState({ x: 50, y: 50 });
+  const [logoSize, setLogoSize] = useState(30);
+  const [logoRotation, setLogoRotation] = useState(0);
+  
   // Refs
   const hatCanvasRef = useRef(null);
   const compositeCanvasRef = useRef(null);
   const hatImageRef = useRef(null);
+  const logoImageRef = useRef(null);
   
   // Load default hat image on mount
   useEffect(() => {
@@ -59,7 +66,7 @@ export default function HatGenerator() {
     if (hatImageRef.current) {
       updateHatCanvas();
     }
-  }, [hatColor, hatText, hatFlipped]);
+  }, [hatColor, hatText, hatFlipped, logoPosition, logoSize, logoRotation]);
   
   // Update composite image when user image or hat changes
   useEffect(() => {
@@ -94,48 +101,15 @@ export default function HatGenerator() {
       ctx.setTransform(1, 0, 0, 1, 0, 0);
     }
     
-    // Get the image data to identify non-transparent pixels
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const data = imageData.data;
-    
-    // Create a temporary canvas for the colored hat
-    const tempCanvas = document.createElement('canvas');
-    const tempCtx = tempCanvas.getContext('2d');
-    tempCanvas.width = canvas.width;
-    tempCanvas.height = canvas.height;
-    
-    // Fill the temporary canvas with the desired color
-    tempCtx.fillStyle = hatColor;
-    tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
-    
-    // Get the color data
-    const colorData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height).data;
-    
-    // Apply color only to non-transparent pixels of the original hat
-    for (let i = 0; i < data.length; i += 4) {
-      // If pixel has some opacity (not fully transparent)
-      if (data[i + 3] > 50) {
-        // Keep the alpha channel from the original
-        const alpha = data[i + 3];
-        
-        // Replace RGB with our color, but preserve shadows/highlights by keeping some luminance
-        const luminance = (data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114) / 255;
-        
-        // Blend the color with luminance
-        data[i] = colorData[i] * (0.7 + 0.3 * luminance);     // R
-        data[i + 1] = colorData[i + 1] * (0.7 + 0.3 * luminance); // G
-        data[i + 2] = colorData[i + 2] * (0.7 + 0.3 * luminance); // B
-        data[i + 3] = alpha; // Keep original alpha
-      }
-    }
-    
-    // Put the modified image data back
-    ctx.putImageData(imageData, 0, 0);
+    // Apply color overlay
+    ctx.globalCompositeOperation = 'source-atop';
+    ctx.fillStyle = hatColor;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.globalCompositeOperation = 'source-over';
     
     // Add text to hat
     if (hatText) {
       // Calculate a good position for text based on hat dimensions
-      // For this hat, we want text centered on the front panel
       const textX = canvas.width * 0.5;
       const textY = canvas.height * 0.45; // Slightly above center
       
@@ -156,6 +130,36 @@ export default function HatGenerator() {
       
       // Reset shadow
       ctx.shadowColor = 'transparent';
+    }
+    
+    // Add logo AFTER coloring and text, so it remains unadulterated
+    if (logoImageRef.current) {
+      // Save the current context state
+      ctx.save();
+      
+      // Move to the logo position
+      const logoX = (canvas.width * logoPosition.x) / 100;
+      const logoY = (canvas.height * logoPosition.y) / 100;
+      
+      // Calculate logo dimensions
+      const logoWidth = (canvas.width * logoSize) / 100;
+      const logoHeight = (logoWidth / logoImageRef.current.width) * logoImageRef.current.height;
+      
+      // Translate to the logo position for rotation
+      ctx.translate(logoX, logoY);
+      ctx.rotate((logoRotation * Math.PI) / 180);
+      
+      // Draw the logo centered at the position
+      ctx.drawImage(
+        logoImageRef.current,
+        -logoWidth / 2,
+        -logoHeight / 2,
+        logoWidth,
+        logoHeight
+      );
+      
+      // Restore the context state
+      ctx.restore();
     }
     
     setHatCanvas(canvas.toDataURL('image/png'));
@@ -224,6 +228,23 @@ export default function HatGenerator() {
         setUserImage(reader.result);
         // Switch to positioning mode after upload
         setEditMode('position');
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+  
+  // Handle logo upload
+  const handleLogoUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          logoImageRef.current = img;
+          updateHatCanvas();
+        };
+        img.src = event.target.result;
       };
       reader.readAsDataURL(file);
     }
@@ -382,6 +403,22 @@ export default function HatGenerator() {
                         type="file"
                         accept="image/*"
                         onChange={handleUserImageUpload}
+                        className="hidden"
+                      />
+                    </label>
+                  </GlowBorder>
+                </div>
+                
+                {/* Upload Logo Button */}
+                <div className="pt-4">
+                  <p className="text-sm mb-3 text-green-500/70">Ready to add a logo?</p>
+                  <GlowBorder>
+                    <label className="block w-full py-3 bg-black text-green-500 rounded-lg text-center cursor-pointer">
+                      Upload Logo
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleLogoUpload}
                         className="hidden"
                       />
                     </label>

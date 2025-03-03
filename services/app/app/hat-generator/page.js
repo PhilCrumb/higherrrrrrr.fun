@@ -458,6 +458,59 @@ export default function HatGenerator() {
                     {hatFlipped ? "Flip Right" : "Flip Left"}
                   </button>
                 </div>
+                
+                {/* Logo customization options - only show if a logo is uploaded */}
+                {logoImageRef.current && (
+                  <>
+                    <div className="mb-4">
+                      <label className="block text-sm mb-2 text-green-500/70">Logo Size: {logoSize}%</label>
+                      <input
+                        type="range"
+                        min="5"
+                        max="80"
+                        value={logoSize}
+                        onChange={(e) => setLogoSize(parseInt(e.target.value))}
+                        className="w-full h-2 bg-green-500/20 rounded-lg appearance-none cursor-pointer"
+                      />
+                    </div>
+                    
+                    <div className="mb-4">
+                      <label className="block text-sm mb-2 text-green-500/70">Logo Position X: {logoPosition.x}%</label>
+                      <input
+                        type="range"
+                        min="10"
+                        max="90"
+                        value={logoPosition.x}
+                        onChange={(e) => setLogoPosition({...logoPosition, x: parseInt(e.target.value)})}
+                        className="w-full h-2 bg-green-500/20 rounded-lg appearance-none cursor-pointer"
+                      />
+                    </div>
+                    
+                    <div className="mb-4">
+                      <label className="block text-sm mb-2 text-green-500/70">Logo Position Y: {logoPosition.y}%</label>
+                      <input
+                        type="range"
+                        min="10"
+                        max="90"
+                        value={logoPosition.y}
+                        onChange={(e) => setLogoPosition({...logoPosition, y: parseInt(e.target.value)})}
+                        className="w-full h-2 bg-green-500/20 rounded-lg appearance-none cursor-pointer"
+                      />
+                    </div>
+                    
+                    <div className="mb-4">
+                      <label className="block text-sm mb-2 text-green-500/70">Logo Rotation: {logoRotation}°</label>
+                      <input
+                        type="range"
+                        min="-180"
+                        max="180"
+                        value={logoRotation}
+                        onChange={(e) => setLogoRotation(parseInt(e.target.value))}
+                        className="w-full h-2 bg-green-500/20 rounded-lg appearance-none cursor-pointer"
+                      />
+                    </div>
+                  </>
+                )}
               </div>
             )}
             

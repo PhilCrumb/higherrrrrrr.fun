@@ -346,122 +346,98 @@ export default function HatGenerator() {
             
             {/* Customize Hat Controls */}
             {editMode === 'customize' && (
-              <div className="border border-green-500/30 rounded-lg p-6 bg-black/20 space-y-6">
-                <h3 className="text-xl font-bold mb-2">Customize Hat</h3>
+              <div className="border border-green-500/20 rounded-lg p-6 bg-black/20 mb-8">
+                <h2 className="text-2xl font-mono mb-6 text-green-500">Customize Hat</h2>
                 
-                {/* Hat Preview */}
-                <div className="flex justify-center mb-6">
-                  {hatCanvas && (
-                    <div className="w-64 h-64 flex items-center justify-center">
-                      <img 
-                        src={hatCanvas} 
-                        alt="Hat Preview" 
-                        className="max-w-full max-h-full object-contain"
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  {/* Left column - Hat preview */}
+                  <div className="flex flex-col items-center">
+                    <div className="w-full max-w-md h-64 flex items-center justify-center mb-4 bg-black/30 rounded-lg">
+                      {hatCanvas && (
+                        <img 
+                          src={hatCanvas} 
+                          alt="Hat Preview" 
+                          className="max-w-full max-h-full object-contain"
+                        />
+                      )}
+                    </div>
+                    
+                    {/* Hat orientation control */}
+                    <div className="w-full max-w-md mb-4">
+                      <button
+                        onClick={() => setHatFlipped(!hatFlipped)}
+                        className="w-full px-4 py-2 border border-green-500/30 rounded-lg bg-black text-green-500 hover:border-green-500/60 transition-colors"
+                      >
+                        {hatFlipped ? "Flip Right" : "Flip Left"}
+                      </button>
+                    </div>
+                    
+                    {/* Logo upload control */}
+                    <div className="w-full max-w-md mb-4">
+                      <div className="flex items-center space-x-2">
+                        <label className="flex-1 cursor-pointer px-4 py-2 border border-green-500/30 rounded-lg bg-black text-green-500 hover:border-green-500/60 transition-colors text-center">
+                          {logoImageRef.current ? "Change Logo" : "Upload Logo"}
+                          <input
+                            type="file"
+                            accept="image/png"
+                            className="hidden"
+                            onChange={handleLogoUpload}
+                          />
+                        </label>
+                        {logoImageRef.current && (
+                          <button
+                            onClick={() => {
+                              logoImageRef.current = null;
+                              updateHatCanvas();
+                            }}
+                            className="px-4 py-2 border border-green-500/30 rounded-lg bg-black text-green-500 hover:border-green-500/60 transition-colors"
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Right column - Controls */}
+                  <div>
+                    {/* Hat color control - SIGNIFICANTLY LARGER */}
+                    <div className="mb-6">
+                      <label className="block text-sm mb-2 text-green-500/70">Hat Color</label>
+                      <div className="flex items-center space-x-3">
+                        <input
+                          type="color"
+                          value={hatColor}
+                          onChange={(e) => setHatColor(e.target.value)}
+                          className="w-24 h-24 rounded cursor-pointer border border-green-500/30"
+                          style={{
+                            appearance: 'none',
+                            backgroundColor: hatColor,
+                            padding: 0
+                          }}
+                        />
+                        <input
+                          type="text"
+                          value={hatColor}
+                          onChange={(e) => setHatColor(e.target.value)}
+                          className="w-32 px-3 py-2 bg-black border border-green-500/30 rounded-lg text-green-500 focus:outline-none focus:border-green-500/60"
+                        />
+                      </div>
+                    </div>
+                    
+                    {/* Hat text control */}
+                    <div className="mb-6">
+                      <label className="block text-sm mb-2 text-green-500/70">Hat Text</label>
+                      <input
+                        type="text"
+                        value={hatText}
+                        onChange={(e) => setHatText(e.target.value)}
+                        placeholder="Enter text for hat"
+                        className="w-full px-4 py-2 bg-black border border-green-500/30 rounded-lg text-green-500 focus:outline-none focus:border-green-500/60"
                       />
                     </div>
-                  )}
-                </div>
-                
-                {/* Hat Color */}
-                <div>
-                  <label className="block text-sm mb-2 text-green-500/70">Hat Color</label>
-                  <div className="flex gap-2">
-                    <input
-                      type="color"
-                      value={hatColor}
-                      onChange={(e) => setHatColor(e.target.value)}
-                      className="h-10 w-10 rounded cursor-pointer"
-                    />
-                    <input
-                      type="text"
-                      value={hatColor}
-                      onChange={(e) => setHatColor(e.target.value)}
-                      className="bg-black border border-green-500/30 rounded p-2 text-green-500 w-full"
-                    />
-                  </div>
-                </div>
-                
-                {/* Hat Text */}
-                <div>
-                  <label className="block text-sm mb-2 text-green-500/70">Hat Text</label>
-                  <input
-                    type="text"
-                    value={hatText}
-                    onChange={(e) => setHatText(e.target.value)}
-                    placeholder="Your token name"
-                    className="bg-black border border-green-500/30 rounded p-2 text-green-500 w-full"
-                  />
-                </div>
-                
-                {/* Upload Profile Image Button */}
-                <div className="pt-4">
-                  <p className="text-sm mb-3 text-green-500/70">Ready to position your hat?</p>
-                  <GlowBorder>
-                    <label className="block w-full py-3 bg-black text-green-500 rounded-lg text-center cursor-pointer">
-                      Upload Profile Image
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleUserImageUpload}
-                        className="hidden"
-                      />
-                    </label>
-                  </GlowBorder>
-                </div>
-                
-                {/* Upload Logo Button */}
-                <div className="pt-4">
-                  <p className="text-sm mb-3 text-green-500/70">Ready to add a logo?</p>
-                  <GlowBorder>
-                    <label className="block w-full py-3 bg-black text-green-500 rounded-lg text-center cursor-pointer">
-                      Upload Logo
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleLogoUpload}
-                        className="hidden"
-                      />
-                    </label>
-                  </GlowBorder>
-                </div>
-                
-                {/* Generate Share URL (Creator Mode) */}
-                {isCreator && (
-                  <div className="pt-4">
-                    <GlowBorder>
-                      <button
-                        onClick={generateShareUrl}
-                        className="w-full py-3 bg-black text-green-500 rounded-lg"
-                      >
-                        Generate Share URL
-                      </button>
-                    </GlowBorder>
                     
-                    {shareUrl && (
-                      <div className="mt-3">
-                        <p className="text-sm mb-1 text-green-500/70">Share URL (copied to clipboard):</p>
-                        <div className="bg-black/50 border border-green-500/30 p-2 rounded text-xs break-all">
-                          {shareUrl}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-                
-                {/* Hat Orientation */}
-                <div className="mb-4">
-                  <label className="block text-sm mb-2 text-green-500/70">Hat Orientation</label>
-                  <button
-                    onClick={() => setHatFlipped(!hatFlipped)}
-                    className="px-4 py-2 border border-green-500/30 rounded-lg bg-black text-green-500 hover:border-green-500/60 transition-colors"
-                  >
-                    {hatFlipped ? "Flip Right" : "Flip Left"}
-                  </button>
-                </div>
-                
-                {/* Logo customization options - only show if a logo is uploaded */}
-                {logoImageRef.current && (
-                  <>
+                    {/* Logo controls - always visible but disabled if no logo */}
                     <div className="mb-4">
                       <label className="block text-sm mb-2 text-green-500/70">Logo Size: {logoSize}%</label>
                       <input
@@ -471,6 +447,7 @@ export default function HatGenerator() {
                         value={logoSize}
                         onChange={(e) => setLogoSize(parseInt(e.target.value))}
                         className="w-full h-2 bg-green-500/20 rounded-lg appearance-none cursor-pointer"
+                        disabled={!logoImageRef.current}
                       />
                     </div>
                     
@@ -483,6 +460,7 @@ export default function HatGenerator() {
                         value={logoPosition.x}
                         onChange={(e) => setLogoPosition({...logoPosition, x: parseInt(e.target.value)})}
                         className="w-full h-2 bg-green-500/20 rounded-lg appearance-none cursor-pointer"
+                        disabled={!logoImageRef.current}
                       />
                     </div>
                     
@@ -495,6 +473,7 @@ export default function HatGenerator() {
                         value={logoPosition.y}
                         onChange={(e) => setLogoPosition({...logoPosition, y: parseInt(e.target.value)})}
                         className="w-full h-2 bg-green-500/20 rounded-lg appearance-none cursor-pointer"
+                        disabled={!logoImageRef.current}
                       />
                     </div>
                     
@@ -507,10 +486,29 @@ export default function HatGenerator() {
                         value={logoRotation}
                         onChange={(e) => setLogoRotation(parseInt(e.target.value))}
                         className="w-full h-2 bg-green-500/20 rounded-lg appearance-none cursor-pointer"
+                        disabled={!logoImageRef.current}
                       />
                     </div>
-                  </>
-                )}
+                  </div>
+                </div>
+                
+                {/* Upload profile picture button - RESTORED */}
+                <div className="mt-8">
+                  <label className="block text-sm mb-2 text-green-500/70">Ready to position your hat?</label>
+                  <button
+                    onClick={() => document.getElementById('profile-upload').click()}
+                    className="w-full px-6 py-3 border border-green-500/30 rounded-lg bg-black text-green-500 hover:border-green-500/60 transition-colors"
+                  >
+                    Upload Profile Image
+                  </button>
+                  <input
+                    id="profile-upload"
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleUserImageUpload}
+                  />
+                </div>
               </div>
             )}
             

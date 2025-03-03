@@ -290,7 +290,7 @@ export default function HatGenerator() {
             <GlitchText>REP YOUR CULT</GlitchText>
           </h1>
           <p className="text-xl text-green-500/80">
-            {isCreator ? "Create a custom hat for your token" : "Create a custom hat to pledge your loyalty"}
+            {isCreator ? "Create a custom hat for your token" : "Give your PFP a custom hat to pledge your loyalty"}
           </p>
         </div>
         

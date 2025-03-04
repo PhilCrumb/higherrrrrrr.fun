@@ -58,6 +58,9 @@ export default function HatGenerator() {
   const [logoBackgroundColor, setLogoBackgroundColor] = useState('#00FF00');
   const [logoBackgroundEnabled, setLogoBackgroundEnabled] = useState(false);
   
+  // Add this state variable at the top with your other state variables
+  const [hatTextSize, setHatTextSize] = useState(24); // Default text size in pixels
+  
   // Load default hat image on mount
   useEffect(() => {
     const hatImg = new Image();
@@ -73,7 +76,7 @@ export default function HatGenerator() {
     if (hatImageRef.current) {
       updateHatCanvas();
     }
-  }, [hatColor, hatText, hatFlipped, logoPosition, logoSize, logoRotation]);
+  }, [hatColor, hatText, hatFlipped, logoPosition, logoSize, logoRotation, hatTextSize]);
   
   // Update composite image when user image or hat changes
   useEffect(() => {
@@ -121,7 +124,7 @@ export default function HatGenerator() {
       const textY = canvas.height * 0.45; // Slightly above center
       
       // Set text style
-      ctx.font = 'bold 24px "Pixelify Mono"';
+      ctx.font = `${hatTextSize}px Arial`;
       ctx.fillStyle = '#FFFFFF';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
@@ -484,6 +487,23 @@ export default function HatGenerator() {
                     />
                   </div>
                   
+                  {/* Hat text size slider - Only show when text is entered */}
+                  {hatText && (
+                    <div className="mb-6">
+                      <label className="block text-sm mb-2 text-green-500/70">
+                        Text Size: {hatTextSize}px
+                      </label>
+                      <input
+                        type="range"
+                        min="12"
+                        max="80"
+                        value={hatTextSize}
+                        onChange={(e) => setHatTextSize(parseInt(e.target.value))}
+                        className="w-full"
+                      />
+                    </div>
+                  )}
+                  
                   {/* Hat flip toggle */}
                   <div className="mb-6">
                     <label className="flex items-center gap-2 cursor-pointer">
@@ -500,7 +520,7 @@ export default function HatGenerator() {
                     </label>
                   </div>
                   
-                  {/* Logo upload for hat */}
+                  {/* Logo upload */}
                   <div className="mb-6">
                     <label className="block text-sm mb-2 text-green-500/70">
                       Hat Logo (Optional)
@@ -593,117 +613,6 @@ export default function HatGenerator() {
                         />
                       </div>
                     </>
-                  )}
-                </>
-              )}
-              
-              {/* Logo customization options - Only show in logo mode */}
-              {mode === 'logo' && (
-                <>
-                  {/* Logo upload for logo mode */}
-                  <div className="mb-6">
-                    <label className="block text-sm mb-2 text-green-500/70">
-                      Upload Logo
-                    </label>
-                    
-                    <div className="flex items-center gap-4">
-                      <label className="flex-1 cursor-pointer">
-                        <div className="px-4 py-2 border border-green-500/30 rounded-lg bg-black text-green-500 hover:border-green-500/60 transition-colors text-center">
-                          {logoImageRef.current ? 'Change Logo' : 'Upload Logo'}
-                        </div>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={handleLogoUpload}
-                        />
-                      </label>
-                      
-                      {logoImageRef.current && (
-                        <button
-                          onClick={() => {
-                            logoImageRef.current = null;
-                            updateHatCanvas();
-                          }}
-                          className="px-3 py-2 border border-red-500/30 rounded-lg bg-black text-red-500 hover:border-red-500/60 transition-colors"
-                        >
-                          Remove
-                        </button>
-                      )}
-                    </div>
-                    
-                    {logoImageRef.current && (
-                      <div className="mt-2 flex justify-center">
-                        <img 
-                          src={logoImageRef.current.src} 
-                          alt="Logo" 
-                          className="h-16 object-contain rounded"
-                        />
-                      </div>
-                    )}
-                  </div>
-                  
-                  {/* Logo size slider - Only show when logo is uploaded */}
-                  {logoImageRef.current && (
-                    <div className="mb-6">
-                      <label className="block text-sm mb-2 text-green-500/70">
-                        Logo Size: {logoSize}%
-                      </label>
-                      <input
-                        type="range"
-                        min="10"
-                        max="100"
-                        value={logoSize}
-                        onChange={(e) => setLogoSize(parseInt(e.target.value))}
-                        className="w-full"
-                      />
-                    </div>
-                  )}
-                  
-                  {/* Logo rotation slider - Only show when logo is uploaded */}
-                  {logoImageRef.current && (
-                    <div className="mb-6">
-                      <label className="block text-sm mb-2 text-green-500/70">
-                        Logo Rotation: {logoRotation}°
-                      </label>
-                      <input
-                        type="range"
-                        min="-180"
-                        max="180"
-                        value={logoRotation}
-                        onChange={(e) => setLogoRotation(parseInt(e.target.value))}
-                        className="w-full"
-                      />
-                    </div>
-                  )}
-                  
-                  {/* Background color option for logo */}
-                  {logoImageRef.current && (
-                    <div className="mb-6">
-                      <label className="block text-sm mb-2 text-green-500/70">
-                        Background Color
-                      </label>
-                      <div className="flex items-center gap-4">
-                        <input
-                          type="color"
-                          value={logoBackgroundColor}
-                          onChange={(e) => setLogoBackgroundColor(e.target.value)}
-                          className="w-full h-10 rounded cursor-pointer"
-                        />
-                        <label className="flex items-center gap-2 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={logoBackgroundEnabled}
-                            onChange={() => setLogoBackgroundEnabled(!logoBackgroundEnabled)}
-                            className="sr-only"
-                          />
-                          <div className={`w-10 h-6 rounded-full ${logoBackgroundEnabled ? 'bg-green-500' : 'bg-gray-600'} relative transition-colors`}>
-                            <div className={`absolute w-4 h-4 rounded-full bg-white top-1 transition-transform ${logoBackgroundEnabled ? 'right-1' : 'left-1'}`}></div>
-                          </div>
-                          <span className="text-green-500/70 whitespace-nowrap">Enable Background</span>
-                        </label>
-                      </div>
-                    </div>
                   )}
                 </>
               )}

@@ -215,6 +215,9 @@ export default function HatGenerator() {
           ctx.drawImage(hatImg, -width/2, -height/2, width, height);
           ctx.restore();
           
+          // Save the result image after drawing the hat
+          setResultImage(canvas.toDataURL('image/png'));
+          
           // Draw logo on hat if in hat mode and logo exists
           if (logoImageRef.current) {
             const logoImg = new Image();
@@ -235,6 +238,9 @@ export default function HatGenerator() {
               ctx.rotate(logoRotation * Math.PI / 180);
               ctx.drawImage(logoImg, -logoWidth/2, -logoHeight/2, logoWidth, logoHeight);
               ctx.restore();
+              
+              // Save the final result image after drawing the logo
+              setResultImage(canvas.toDataURL('image/png'));
             };
           }
         };
@@ -268,6 +274,9 @@ export default function HatGenerator() {
           ctx.rotate(logoRotation * Math.PI / 180);
           ctx.drawImage(logoImg, -width/2, -height/2, width, height);
           ctx.restore();
+          
+          // Save the result image after drawing the logo
+          setResultImage(canvas.toDataURL('image/png'));
         };
       }
     };
@@ -892,6 +901,15 @@ export default function HatGenerator() {
                   />
                 </div>
               )}
+            </div>
+            {/* Add Download Button */}
+            <div className="mt-4">
+              <button
+                onClick={handleDownload}
+                className="px-6 py-3 border border-green-500/30 rounded-lg bg-black text-green-500 hover:border-green-500/60 transition-colors"
+              >
+                Download Image
+              </button>
             </div>
           </div>
         </div>

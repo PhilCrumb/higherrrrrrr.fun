@@ -45,11 +45,18 @@ export default function HatGenerator() {
   const [logoSize, setLogoSize] = useState(30);
   const [logoRotation, setLogoRotation] = useState(0);
   
+  // State for mode
+  const [mode, setMode] = useState('hat'); // 'hat' or 'logo'
+  
   // Refs
   const hatCanvasRef = useRef(null);
   const compositeCanvasRef = useRef(null);
   const hatImageRef = useRef(null);
   const logoImageRef = useRef(null);
+  
+  // Add these state variables for logo background options
+  const [logoBackgroundColor, setLogoBackgroundColor] = useState('#00FF00');
+  const [logoBackgroundEnabled, setLogoBackgroundEnabled] = useState(false);
   
   // Load default hat image on mount
   useEffect(() => {
@@ -167,56 +174,100 @@ export default function HatGenerator() {
   
   // Function to update the composite image
   const updateCompositeImage = () => {
-    if (!compositeCanvasRef.current || !userImage || !hatCanvas) return;
+    if (!compositeCanvasRef.current || !userImage) return;
     
     const canvas = compositeCanvasRef.current;
     const ctx = canvas.getContext('2d');
     
-    // Load user image
-    const userImg = new Image();
-    userImg.onload = () => {
-      // Set canvas size to match user image
-      canvas.width = userImg.width;
-      canvas.height = userImg.height;
+    // Load the user image
+    const img = new Image();
+    img.src = userImage;
+    
+    img.onload = () => {
+      // Set canvas dimensions to match the image
+      canvas.width = img.width;
+      canvas.height = img.height;
       
-      // Clear canvas
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      // Draw the user image
+      ctx.drawImage(img, 0, 0);
       
-      // Draw user image
-      ctx.drawImage(userImg, 0, 0);
-      
-      // Load hat image
-      const hatImg = new Image();
-      hatImg.onload = () => {
-        // Calculate hat dimensions based on size percentage
-        const hatWidth = (canvas.width * hatSize) / 100;
-        const hatHeight = (hatWidth / hatImg.width) * hatImg.height;
+      if (mode === 'hat' && hatCanvas) {
+        // Draw the hat on top of the user image
+        const hatImg = new Image();
+        hatImg.src = hatCanvas;
         
-        // Calculate position based on percentages
-        const x = (canvas.width * hatPosition.x) / 100 - hatWidth / 2;
-        const y = (canvas.height * hatPosition.y) / 100 - hatHeight / 2;
+        hatImg.onload = () => {
+          // Calculate position based on percentage
+          const x = (hatPosition.x / 100) * canvas.width;
+          const y = (hatPosition.y / 100) * canvas.height;
+          
+          // Calculate dimensions based on size percentage
+          const width = (hatSize / 100) * canvas.width;
+          const height = (width / hatImg.width) * hatImg.height;
+          
+          // Draw the hat with rotation
+          ctx.save();
+          ctx.translate(x, y);
+          ctx.rotate(hatRotation * Math.PI / 180);
+          ctx.drawImage(hatImg, -width/2, -height/2, width, height);
+          ctx.restore();
+          
+          // Draw logo on hat if in hat mode and logo exists
+          if (logoImageRef.current) {
+            const logoImg = new Image();
+            logoImg.src = logoImageRef.current.src;
+            
+            logoImg.onload = () => {
+              // Logo positioning relative to hat
+              const logoX = x + (logoPosition.x - 50) * width / 100;
+              const logoY = y + (logoPosition.y - 50) * height / 100;
+              
+              // Logo sizing relative to hat
+              const logoWidth = (logoSize / 100) * width;
+              const logoHeight = (logoWidth / logoImg.width) * logoImg.height;
+              
+              // Draw the logo with rotation
+              ctx.save();
+              ctx.translate(logoX, logoY);
+              ctx.rotate(logoRotation * Math.PI / 180);
+              ctx.drawImage(logoImg, -logoWidth/2, -logoHeight/2, logoWidth, logoHeight);
+              ctx.restore();
+            };
+          }
+        };
+      } else if (mode === 'logo' && logoImageRef.current) {
+        // Draw just the logo on the user image (no hat)
+        const logoImg = new Image();
+        logoImg.src = logoImageRef.current.src;
         
-        // Save context for rotation
-        ctx.save();
-        
-        // Move to center of where hat should be
-        ctx.translate(x + hatWidth / 2, y + hatHeight / 2);
-        
-        // Rotate
-        ctx.rotate((hatRotation * Math.PI) / 180);
-        
-        // Draw hat (centered at origin now)
-        ctx.drawImage(hatImg, -hatWidth / 2, -hatHeight / 2, hatWidth, hatHeight);
-        
-        // Restore context
-        ctx.restore();
-        
-        // Update result image
-        setResultImage(canvas.toDataURL('image/png'));
-      };
-      hatImg.src = hatCanvas;
+        logoImg.onload = () => {
+          // Calculate position based on percentage
+          const x = (logoPosition.x / 100) * canvas.width;
+          const y = (logoPosition.y / 100) * canvas.height;
+          
+          // Calculate dimensions based on size percentage
+          const width = (logoSize / 100) * canvas.width;
+          const height = (width / logoImg.width) * logoImg.height;
+          
+          // Draw background circle if enabled
+          if (logoBackgroundEnabled) {
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(x, y, width/2, 0, Math.PI * 2);
+            ctx.fillStyle = logoBackgroundColor;
+            ctx.fill();
+            ctx.restore();
+          }
+          
+          // Draw the logo with rotation
+          ctx.save();
+          ctx.translate(x, y);
+          ctx.rotate(logoRotation * Math.PI / 180);
+          ctx.drawImage(logoImg, -width/2, -height/2, width, height);
+          ctx.restore();
+        };
+      }
     };
-    userImg.src = userImage;
   };
   
   // Handle user image upload
@@ -259,19 +310,20 @@ export default function HatGenerator() {
     setIsDragging(false);
   };
   
-  const handleDrag = (_, info) => {
-    if (compositeCanvasRef.current && userImage) {
-      const canvas = compositeCanvasRef.current;
-      
-      // Convert pixel position to percentage
-      const newX = (info.point.x / canvas.clientWidth) * 100;
-      const newY = (info.point.y / canvas.clientHeight) * 100;
-      
-      // Clamp values to stay within canvas
-      const clampedX = Math.max(0, Math.min(100, newX));
-      const clampedY = Math.max(0, Math.min(100, newY));
-      
-      setHatPosition({ x: clampedX, y: clampedY });
+  const handleDrag = (e, info) => {
+    // Get the dimensions of the container
+    const container = e.target.parentElement;
+    const rect = container.getBoundingClientRect();
+    
+    // Calculate the new position as a percentage of the container
+    const x = (info.point.x - rect.left) / rect.width * 100;
+    const y = (info.point.y - rect.top) / rect.height * 100;
+    
+    // Update the position state based on the current mode
+    if (mode === 'hat') {
+      setHatPosition({ x, y });
+    } else {
+      setLogoPosition({ x, y });
     }
   };
   
@@ -302,6 +354,29 @@ export default function HatGenerator() {
     }
   };
   
+  // Toggle mode
+  const toggleMode = () => {
+    setMode(mode === 'hat' ? 'logo' : 'hat');
+  };
+  
+  // Update the tab labels based on the current mode
+  const getTabLabels = () => {
+    if (mode === 'hat') {
+      return {
+        customize: 'Customize Hat',
+        position: 'Position Hat'
+      };
+    } else {
+      return {
+        customize: 'Customize Logo',
+        position: 'Position Logo'
+      };
+    }
+  };
+  
+  // Use this in your UI
+  const tabLabels = getTabLabels();
+  
   return (
     <div className="min-h-screen bg-black text-green-500 font-mono">
       <div className="max-w-7xl mx-auto px-4 py-12">
@@ -319,6 +394,35 @@ export default function HatGenerator() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Left Column - Controls */}
           <div className="space-y-6">
+            {/* Mode Toggle */}
+            <div className="mb-6">
+              <label className="block text-sm mb-2 text-green-500/70">
+                Customization Mode
+              </label>
+              <div className="flex border border-green-500/30 rounded-lg overflow-hidden">
+                <button
+                  onClick={() => setMode('hat')}
+                  className={`flex-1 py-2 px-4 ${
+                    mode === 'hat' 
+                      ? 'bg-green-500/20 text-green-500' 
+                      : 'bg-black text-green-500/50 hover:text-green-500/70'
+                  }`}
+                >
+                  Hat Mode
+                </button>
+                <button
+                  onClick={() => setMode('logo')}
+                  className={`flex-1 py-2 px-4 ${
+                    mode === 'logo' 
+                      ? 'bg-green-500/20 text-green-500' 
+                      : 'bg-black text-green-500/50 hover:text-green-500/70'
+                  }`}
+                >
+                  Logo Mode
+                </button>
+              </div>
+            </div>
+            
             {/* Mode Switcher */}
             <div className="flex border border-green-500/30 rounded-lg overflow-hidden mb-6">
               <button
@@ -329,7 +433,7 @@ export default function HatGenerator() {
                     : 'bg-black text-green-500/50 hover:bg-green-500/10'
                 }`}
               >
-                Customize Hat
+                {tabLabels.customize}
               </button>
               <button
                 onClick={() => setEditMode('position')}
@@ -340,265 +444,392 @@ export default function HatGenerator() {
                 }`}
                 disabled={!userImage}
               >
-                Position Hat
+                {tabLabels.position}
               </button>
             </div>
             
             {/* Customize Hat Controls */}
-            {editMode === 'customize' && (
-              <div className="border border-green-500/20 rounded-lg p-6 bg-black/20 mb-8">
-                <h2 className="text-2xl font-mono mb-6 text-green-500">Customize Hat</h2>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  {/* Left column - Hat preview */}
-                  <div className="flex flex-col items-center">
-                    <div className="w-full max-w-md h-64 flex items-center justify-center mb-4 bg-black/30 rounded-lg">
-                      {hatCanvas && (
-                        <img 
-                          src={hatCanvas} 
-                          alt="Hat Preview" 
-                          className="max-w-full max-h-full object-contain"
+            <div className={editMode === 'customize' ? 'block' : 'hidden'}>
+              <h2 className="text-xl font-bold mb-4 text-green-500">
+                {mode === 'hat' ? 'Customize Hat' : 'Customize Logo'}
+              </h2>
+              
+              {/* Hat customization options - Only show in hat mode */}
+              {mode === 'hat' && (
+                <>
+                  {/* Hat color picker */}
+                  <div className="mb-6">
+                    <label className="block text-sm mb-2 text-green-500/70">
+                      Hat Color
+                    </label>
+                    <input
+                      type="color"
+                      value={hatColor}
+                      onChange={(e) => setHatColor(e.target.value)}
+                      className="w-full h-10 rounded cursor-pointer"
+                    />
+                  </div>
+                  
+                  {/* Hat text input */}
+                  <div className="mb-6">
+                    <label className="block text-sm mb-2 text-green-500/70">
+                      Hat Text
+                    </label>
+                    <input
+                      type="text"
+                      value={hatText}
+                      onChange={(e) => setHatText(e.target.value)}
+                      className="w-full px-3 py-2 bg-black border border-green-500/30 rounded text-green-500"
+                      placeholder="Enter text for hat"
+                    />
+                  </div>
+                  
+                  {/* Hat flip toggle */}
+                  <div className="mb-6">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={hatFlipped}
+                        onChange={() => setHatFlipped(!hatFlipped)}
+                        className="sr-only"
+                      />
+                      <div className={`w-10 h-6 rounded-full ${hatFlipped ? 'bg-green-500' : 'bg-gray-600'} relative transition-colors`}>
+                        <div className={`absolute w-4 h-4 rounded-full bg-white top-1 transition-transform ${hatFlipped ? 'right-1' : 'left-1'}`}></div>
+                      </div>
+                      <span className="text-green-500/70">Flip Hat</span>
+                    </label>
+                  </div>
+                  
+                  {/* Logo upload for hat */}
+                  <div className="mb-6">
+                    <label className="block text-sm mb-2 text-green-500/70">
+                      Hat Logo (Optional)
+                    </label>
+                    
+                    <div className="flex items-center gap-4">
+                      <label className="flex-1 cursor-pointer">
+                        <div className="px-4 py-2 border border-green-500/30 rounded-lg bg-black text-green-500 hover:border-green-500/60 transition-colors text-center">
+                          {logoImageRef.current ? 'Change Logo' : 'Upload Logo'}
+                        </div>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={handleLogoUpload}
                         />
+                      </label>
+                      
+                      {logoImageRef.current && (
+                        <button
+                          onClick={() => {
+                            logoImageRef.current = null;
+                            updateHatCanvas();
+                          }}
+                          className="px-3 py-2 border border-red-500/30 rounded-lg bg-black text-red-500 hover:border-red-500/60 transition-colors"
+                        >
+                          Remove
+                        </button>
                       )}
                     </div>
                     
-                    {/* Hat orientation control */}
-                    <div className="w-full max-w-md mb-4">
-                      <button
-                        onClick={() => setHatFlipped(!hatFlipped)}
-                        className="w-full px-4 py-2 border border-green-500/30 rounded-lg bg-black text-green-500 hover:border-green-500/60 transition-colors"
-                      >
-                        {hatFlipped ? "Flip Right" : "Flip Left"}
-                      </button>
-                    </div>
-                    
-                    {/* Logo upload control */}
-                    <div className="w-full max-w-md mb-4">
-                      <div className="flex items-center space-x-2">
-                        <label className="flex-1 cursor-pointer px-4 py-2 border border-green-500/30 rounded-lg bg-black text-green-500 hover:border-green-500/60 transition-colors text-center">
-                          {logoImageRef.current ? "Change Logo" : "Upload Logo"}
-                          <input
-                            type="file"
-                            accept="image/png"
-                            className="hidden"
-                            onChange={handleLogoUpload}
-                          />
-                        </label>
-                        {logoImageRef.current && (
-                          <button
-                            onClick={() => {
-                              logoImageRef.current = null;
-                              updateHatCanvas();
-                            }}
-                            className="px-4 py-2 border border-green-500/30 rounded-lg bg-black text-green-500 hover:border-green-500/60 transition-colors"
-                          >
-                            Remove
-                          </button>
-                        )}
+                    {logoImageRef.current && (
+                      <div className="mt-2 flex justify-center">
+                        <img 
+                          src={logoImageRef.current.src} 
+                          alt="Logo" 
+                          className="h-16 object-contain rounded"
+                        />
                       </div>
-                    </div>
+                    )}
                   </div>
                   
-                  {/* Right column - Controls */}
-                  <div>
-                    {/* Hat color control - SIGNIFICANTLY LARGER */}
+                  {/* Logo size slider - Only show when logo is uploaded */}
+                  {logoImageRef.current && (
                     <div className="mb-6">
-                      <label className="block text-sm mb-2 text-green-500/70">Hat Color</label>
-                      <div className="flex items-center space-x-3">
-                        <input
-                          type="color"
-                          value={hatColor}
-                          onChange={(e) => setHatColor(e.target.value)}
-                          className="w-24 h-24 rounded cursor-pointer border border-green-500/30"
-                          style={{
-                            appearance: 'none',
-                            backgroundColor: hatColor,
-                            padding: 0
-                          }}
-                        />
-                        <input
-                          type="text"
-                          value={hatColor}
-                          onChange={(e) => setHatColor(e.target.value)}
-                          className="w-32 px-3 py-2 bg-black border border-green-500/30 rounded-lg text-green-500 focus:outline-none focus:border-green-500/60"
-                        />
-                      </div>
-                    </div>
-                    
-                    {/* Hat text control */}
-                    <div className="mb-6">
-                      <label className="block text-sm mb-2 text-green-500/70">Hat Text</label>
-                      <input
-                        type="text"
-                        value={hatText}
-                        onChange={(e) => setHatText(e.target.value)}
-                        placeholder="Enter text for hat"
-                        className="w-full px-4 py-2 bg-black border border-green-500/30 rounded-lg text-green-500 focus:outline-none focus:border-green-500/60"
-                      />
-                    </div>
-                    
-                    {/* Logo controls - always visible but disabled if no logo */}
-                    <div className="mb-4">
-                      <label className="block text-sm mb-2 text-green-500/70">Logo Size: {logoSize}%</label>
+                      <label className="block text-sm mb-2 text-green-500/70">
+                        Logo Size: {logoSize}%
+                      </label>
                       <input
                         type="range"
-                        min="5"
-                        max="80"
+                        min="10"
+                        max="100"
                         value={logoSize}
                         onChange={(e) => setLogoSize(parseInt(e.target.value))}
-                        className="w-full h-2 bg-green-500/20 rounded-lg appearance-none cursor-pointer"
-                        disabled={!logoImageRef.current}
+                        className="w-full"
                       />
                     </div>
+                  )}
+                  
+                  {/* Logo position controls - Only show when logo is uploaded */}
+                  {logoImageRef.current && (
+                    <>
+                      <div className="mb-6">
+                        <label className="block text-sm mb-2 text-green-500/70">
+                          Logo Position X: {logoPosition.x.toFixed(1)}%
+                        </label>
+                        <input
+                          type="range"
+                          min="0"
+                          max="100"
+                          step="0.1"
+                          value={logoPosition.x}
+                          onChange={(e) => setLogoPosition(prev => ({ ...prev, x: parseFloat(e.target.value) }))}
+                          className="w-full"
+                        />
+                      </div>
+                      
+                      <div className="mb-6">
+                        <label className="block text-sm mb-2 text-green-500/70">
+                          Logo Position Y: {logoPosition.y.toFixed(1)}%
+                        </label>
+                        <input
+                          type="range"
+                          min="0"
+                          max="100"
+                          step="0.1"
+                          value={logoPosition.y}
+                          onChange={(e) => setLogoPosition(prev => ({ ...prev, y: parseFloat(e.target.value) }))}
+                          className="w-full"
+                        />
+                      </div>
+                    </>
+                  )}
+                </>
+              )}
+              
+              {/* Logo customization options - Only show in logo mode */}
+              {mode === 'logo' && (
+                <>
+                  {/* Logo upload for logo mode */}
+                  <div className="mb-6">
+                    <label className="block text-sm mb-2 text-green-500/70">
+                      Upload Logo
+                    </label>
                     
-                    <div className="mb-4">
-                      <label className="block text-sm mb-2 text-green-500/70">Logo Position X: {logoPosition.x}%</label>
+                    <div className="flex items-center gap-4">
+                      <label className="flex-1 cursor-pointer">
+                        <div className="px-4 py-2 border border-green-500/30 rounded-lg bg-black text-green-500 hover:border-green-500/60 transition-colors text-center">
+                          {logoImageRef.current ? 'Change Logo' : 'Upload Logo'}
+                        </div>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={handleLogoUpload}
+                        />
+                      </label>
+                      
+                      {logoImageRef.current && (
+                        <button
+                          onClick={() => {
+                            logoImageRef.current = null;
+                            updateHatCanvas();
+                          }}
+                          className="px-3 py-2 border border-red-500/30 rounded-lg bg-black text-red-500 hover:border-red-500/60 transition-colors"
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                    
+                    {logoImageRef.current && (
+                      <div className="mt-2 flex justify-center">
+                        <img 
+                          src={logoImageRef.current.src} 
+                          alt="Logo" 
+                          className="h-16 object-contain rounded"
+                        />
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Logo size slider - Only show when logo is uploaded */}
+                  {logoImageRef.current && (
+                    <div className="mb-6">
+                      <label className="block text-sm mb-2 text-green-500/70">
+                        Logo Size: {logoSize}%
+                      </label>
                       <input
                         type="range"
                         min="10"
-                        max="90"
-                        value={logoPosition.x}
-                        onChange={(e) => setLogoPosition({...logoPosition, x: parseInt(e.target.value)})}
-                        className="w-full h-2 bg-green-500/20 rounded-lg appearance-none cursor-pointer"
-                        disabled={!logoImageRef.current}
+                        max="100"
+                        value={logoSize}
+                        onChange={(e) => setLogoSize(parseInt(e.target.value))}
+                        className="w-full"
                       />
                     </div>
-                    
-                    <div className="mb-4">
-                      <label className="block text-sm mb-2 text-green-500/70">Logo Position Y: {logoPosition.y}%</label>
-                      <input
-                        type="range"
-                        min="10"
-                        max="90"
-                        value={logoPosition.y}
-                        onChange={(e) => setLogoPosition({...logoPosition, y: parseInt(e.target.value)})}
-                        className="w-full h-2 bg-green-500/20 rounded-lg appearance-none cursor-pointer"
-                        disabled={!logoImageRef.current}
-                      />
-                    </div>
-                    
-                    <div className="mb-4">
-                      <label className="block text-sm mb-2 text-green-500/70">Logo Rotation: {logoRotation}°</label>
+                  )}
+                  
+                  {/* Logo rotation slider - Only show when logo is uploaded */}
+                  {logoImageRef.current && (
+                    <div className="mb-6">
+                      <label className="block text-sm mb-2 text-green-500/70">
+                        Logo Rotation: {logoRotation}°
+                      </label>
                       <input
                         type="range"
                         min="-180"
                         max="180"
                         value={logoRotation}
                         onChange={(e) => setLogoRotation(parseInt(e.target.value))}
-                        className="w-full h-2 bg-green-500/20 rounded-lg appearance-none cursor-pointer"
-                        disabled={!logoImageRef.current}
+                        className="w-full"
                       />
                     </div>
-                  </div>
-                </div>
-                
-                {/* Upload profile picture button - RESTORED */}
-                <div className="mt-8">
-                  <label className="block text-sm mb-2 text-green-500/70">Ready to position your hat?</label>
-                  <button
-                    onClick={() => document.getElementById('profile-upload').click()}
-                    className="w-full px-6 py-3 border border-green-500/30 rounded-lg bg-black text-green-500 hover:border-green-500/60 transition-colors"
-                  >
-                    Upload Profile Image
-                  </button>
-                  <input
-                    id="profile-upload"
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handleUserImageUpload}
-                  />
-                </div>
-              </div>
-            )}
+                  )}
+                  
+                  {/* Background color option for logo */}
+                  {logoImageRef.current && (
+                    <div className="mb-6">
+                      <label className="block text-sm mb-2 text-green-500/70">
+                        Background Color
+                      </label>
+                      <div className="flex items-center gap-4">
+                        <input
+                          type="color"
+                          value={logoBackgroundColor}
+                          onChange={(e) => setLogoBackgroundColor(e.target.value)}
+                          className="w-full h-10 rounded cursor-pointer"
+                        />
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={logoBackgroundEnabled}
+                            onChange={() => setLogoBackgroundEnabled(!logoBackgroundEnabled)}
+                            className="sr-only"
+                          />
+                          <div className={`w-10 h-6 rounded-full ${logoBackgroundEnabled ? 'bg-green-500' : 'bg-gray-600'} relative transition-colors`}>
+                            <div className={`absolute w-4 h-4 rounded-full bg-white top-1 transition-transform ${logoBackgroundEnabled ? 'right-1' : 'left-1'}`}></div>
+                          </div>
+                          <span className="text-green-500/70 whitespace-nowrap">Enable Background</span>
+                        </label>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
             
-            {/* Position Hat Controls */}
-            {editMode === 'position' && (
-              <div className="border border-green-500/30 rounded-lg p-6 bg-black/20 space-y-6">
-                <h3 className="text-xl font-bold mb-2">Position Hat</h3>
-                <p className="text-sm text-green-500/70 mb-4">
-                  Drag the hat directly on the image or use the controls below to adjust
-                </p>
-                
-                {/* Size Slider */}
-                <div>
-                  <label className="block text-sm mb-2 text-green-500/70">Size: {hatSize}%</label>
-                  <input
-                    type="range"
-                    min="10"
-                    max="100"
-                    value={hatSize}
-                    onChange={(e) => setHatSize(parseInt(e.target.value))}
-                    className="w-full accent-green-500"
-                  />
-                </div>
-                
-                {/* Rotation Slider */}
-                <div>
-                  <label className="block text-sm mb-2 text-green-500/70">Rotation: {hatRotation}°</label>
-                  <input
-                    type="range"
-                    min="-180"
-                    max="180"
-                    value={hatRotation}
-                    onChange={(e) => setHatRotation(parseInt(e.target.value))}
-                    className="w-full accent-green-500"
-                  />
-                </div>
-                
-                {/* Position Values */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm mb-2 text-green-500/70">X Position: {hatPosition.x.toFixed(1)}%</label>
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      step="0.1"
-                      value={hatPosition.x}
-                      onChange={(e) => setHatPosition({...hatPosition, x: parseFloat(e.target.value)})}
-                      className="w-full accent-green-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm mb-2 text-green-500/70">Y Position: {hatPosition.y.toFixed(1)}%</label>
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      step="0.1"
-                      value={hatPosition.y}
-                      onChange={(e) => setHatPosition({...hatPosition, y: parseFloat(e.target.value)})}
-                      className="w-full accent-green-500"
-                    />
-                  </div>
-                </div>
-                
-                {/* Download Button */}
-                {resultImage && (
-                  <div className="pt-4">
-                    <GlowBorder>
-                      <button
-                        onClick={handleDownload}
-                        className="w-full py-3 bg-black text-green-500 rounded-lg"
-                      >
-                        Download Image
-                      </button>
-                    </GlowBorder>
-                  </div>
-                )}
-                
-                {/* Back to Customize */}
-                <div>
-                  <button
-                    onClick={() => setEditMode('customize')}
-                    className="text-green-500/70 hover:text-green-500 text-sm"
-                  >
-                    ← Back to Hat Customization
-                  </button>
-                </div>
+            {/* Position Controls */}
+            <div className={editMode === 'position' ? 'block' : 'hidden'}>
+              <h2 className="text-xl font-bold mb-4 text-green-500">
+                {mode === 'hat' ? 'Position Hat' : 'Position Logo'}
+              </h2>
+              
+              <p className="text-green-500/70 mb-6">
+                {mode === 'hat' 
+                  ? 'Drag the hat directly on the image or use the controls below to adjust'
+                  : 'Drag the logo directly on the image or use the controls below to adjust'
+                }
+              </p>
+              
+              {/* Size slider */}
+              <div className="mb-6">
+                <label className="block text-sm mb-2 text-green-500/70">
+                  Size: {mode === 'hat' ? hatSize : logoSize}%
+                </label>
+                <input
+                  type="range"
+                  min="10"
+                  max="100"
+                  value={mode === 'hat' ? hatSize : logoSize}
+                  onChange={(e) => {
+                    if (mode === 'hat') {
+                      setHatSize(parseInt(e.target.value));
+                    } else {
+                      setLogoSize(parseInt(e.target.value));
+                    }
+                  }}
+                  className="w-full"
+                />
               </div>
-            )}
+              
+              {/* Rotation slider */}
+              <div className="mb-6">
+                <label className="block text-sm mb-2 text-green-500/70">
+                  Rotation: {mode === 'hat' ? hatRotation : logoRotation}°
+                </label>
+                <input
+                  type="range"
+                  min="-180"
+                  max="180"
+                  value={mode === 'hat' ? hatRotation : logoRotation}
+                  onChange={(e) => {
+                    if (mode === 'hat') {
+                      setHatRotation(parseInt(e.target.value));
+                    } else {
+                      setLogoRotation(parseInt(e.target.value));
+                    }
+                  }}
+                  className="w-full"
+                />
+              </div>
+              
+              {/* X Position slider */}
+              <div className="mb-6">
+                <label className="block text-sm mb-2 text-green-500/70">
+                  X Position: {mode === 'hat' ? hatPosition.x.toFixed(1) : logoPosition.x.toFixed(1)}%
+                </label>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  step="0.1"
+                  value={mode === 'hat' ? hatPosition.x : logoPosition.x}
+                  onChange={(e) => {
+                    const value = parseFloat(e.target.value);
+                    if (mode === 'hat') {
+                      setHatPosition(prev => ({ ...prev, x: value }));
+                    } else {
+                      setLogoPosition(prev => ({ ...prev, x: value }));
+                    }
+                  }}
+                  className="w-full"
+                />
+              </div>
+              
+              {/* Y Position slider */}
+              <div className="mb-6">
+                <label className="block text-sm mb-2 text-green-500/70">
+                  Y Position: {mode === 'hat' ? hatPosition.y.toFixed(1) : logoPosition.y.toFixed(1)}%
+                </label>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  step="0.1"
+                  value={mode === 'hat' ? hatPosition.y : logoPosition.y}
+                  onChange={(e) => {
+                    const value = parseFloat(e.target.value);
+                    if (mode === 'hat') {
+                      setHatPosition(prev => ({ ...prev, y: value }));
+                    } else {
+                      setLogoPosition(prev => ({ ...prev, y: value }));
+                    }
+                  }}
+                  className="w-full"
+                />
+              </div>
+              
+              {/* Reset Position button */}
+              <div className="mb-6">
+                <button
+                  onClick={() => {
+                    if (mode === 'hat') {
+                      setHatPosition({ x: 50, y: 50 });
+                      setHatRotation(0);
+                      setHatSize(50);
+                    } else {
+                      setLogoPosition({ x: 50, y: 50 });
+                      setLogoRotation(0);
+                      setLogoSize(30);
+                    }
+                  }}
+                  className="w-full px-4 py-2 border border-green-500/30 rounded-lg bg-black text-green-500 hover:border-green-500/60 transition-colors"
+                >
+                  Reset Position
+                </button>
+              </div>
+            </div>
           </div>
           
           {/* Right Column - Preview */}
@@ -615,19 +846,10 @@ export default function HatGenerator() {
                     className="w-full h-full object-contain"
                   />
                   
-                  {/* Draggable hat overlay (only in position mode) */}
-                  {editMode === 'position' && hatCanvas && (
-                    <motion.div
-                      className="absolute top-0 left-0 w-full h-full"
-                      style={{ 
-                        touchAction: 'none',
-                        cursor: isDragging ? 'grabbing' : 'grab'
-                      }}
-                      drag={editMode === 'position'}
-                      dragMomentum={false}
-                      onDragStart={handleDragStart}
-                      onDragEnd={handleDragEnd}
-                      onDrag={handleDrag}
+                  {/* Hat overlay - Only show in hat mode */}
+                  {mode === 'hat' && hatCanvas && (
+                    <div 
+                      className={`absolute top-0 left-0 w-full h-full ${editMode === 'position' ? '' : 'pointer-events-none'}`}
                     >
                       <div 
                         className="absolute"
@@ -636,8 +858,7 @@ export default function HatGenerator() {
                           top: `${hatPosition.y}%`,
                           transform: `translate(-50%, -50%) rotate(${hatRotation}deg)`,
                           width: `${hatSize}%`,
-                          height: 'auto',
-                          pointerEvents: 'none'
+                          height: 'auto'
                         }}
                       >
                         <img 
@@ -645,7 +866,69 @@ export default function HatGenerator() {
                           alt="Hat" 
                           className="w-full h-auto"
                         />
+                        
+                        {/* Logo on hat - Only in hat mode */}
+                        {logoImageRef.current && (
+                          <div 
+                            className="absolute"
+                            style={{
+                              left: `${logoPosition.x}%`,
+                              top: `${logoPosition.y}%`,
+                              transform: `translate(-50%, -50%) rotate(${logoRotation}deg)`,
+                              width: `${logoSize}%`,
+                              height: 'auto'
+                            }}
+                          >
+                            <img 
+                              src={logoImageRef.current.src} 
+                              alt="Logo" 
+                              className="w-full h-auto"
+                            />
+                          </div>
+                        )}
                       </div>
+                    </div>
+                  )}
+                  
+                  {/* Logo overlay - Only show in logo mode */}
+                  {mode === 'logo' && logoImageRef.current && (
+                    <div 
+                      className={`absolute top-0 left-0 w-full h-full ${editMode === 'position' ? '' : 'pointer-events-none'}`}
+                    >
+                      <div 
+                        className="absolute"
+                        style={{
+                          left: `${logoPosition.x}%`,
+                          top: `${logoPosition.y}%`,
+                          transform: `translate(-50%, -50%) rotate(${logoRotation}deg)`,
+                          width: `${logoSize}%`,
+                          height: 'auto'
+                        }}
+                      >
+                        <img 
+                          src={logoImageRef.current.src} 
+                          alt="Logo" 
+                          className="w-full h-auto"
+                        />
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Draggable area */}
+                  {editMode === 'position' && (
+                    <motion.div
+                      className="absolute top-0 left-0 w-full h-full"
+                      style={{ 
+                        touchAction: 'none',
+                        cursor: isDragging ? 'grabbing' : 'grab'
+                      }}
+                      drag={true}
+                      dragMomentum={false}
+                      onDragStart={handleDragStart}
+                      onDragEnd={handleDragEnd}
+                      onDrag={handleDrag}
+                    >
+                      {/* This div is just for drag detection */}
                     </motion.div>
                   )}
                   
@@ -657,22 +940,47 @@ export default function HatGenerator() {
                 </div>
               ) : (
                 <div className="w-full h-full border-2 border-dashed border-green-500/30 flex flex-col items-center justify-center p-6">
-                  {hatCanvas ? (
+                  {mode === 'hat' && hatCanvas ? (
                     <>
                       <img 
                         src={hatCanvas} 
                         alt="Hat Preview" 
                         className="w-48 h-auto mb-6"
                       />
-                      <p className="text-green-500/50 text-center">
+                      <p className="text-green-500/50 text-center mb-6">
                         Your hat is ready! Upload a profile image to position it.
                       </p>
                     </>
+                  ) : mode === 'logo' && logoImageRef.current ? (
+                    <>
+                      <img 
+                        src={logoImageRef.current.src} 
+                        alt="Logo Preview" 
+                        className="w-48 h-auto mb-6"
+                      />
+                      <p className="text-green-500/50 text-center mb-6">
+                        Your logo is ready! Upload a profile image to position it.
+                      </p>
+                    </>
                   ) : (
-                    <p className="text-green-500/50">
-                      Loading hat template...
+                    <p className="text-green-500/50 text-center mb-6">
+                      {mode === 'hat' ? 'Customize your hat and upload a profile image.' : 'Upload a logo and a profile image.'}
                     </p>
                   )}
+                  
+                  <button
+                    onClick={() => document.getElementById('profile-upload').click()}
+                    className="px-6 py-3 border border-green-500/30 rounded-lg bg-black text-green-500 hover:border-green-500/60 transition-colors"
+                  >
+                    Upload Profile Image
+                  </button>
+                  <input
+                    id="profile-upload"
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleUserImageUpload}
+                  />
                 </div>
               )}
             </div>
